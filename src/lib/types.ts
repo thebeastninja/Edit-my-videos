@@ -55,6 +55,8 @@ export interface TextOverlay {
   font?: TextFont;
   /** Background color for the box and highlight styles. */
   bg?: string;
+  /** Set on auto-generated captions so they can be restyled or removed together. */
+  group?: "caption";
 }
 
 export interface MusicTrack {

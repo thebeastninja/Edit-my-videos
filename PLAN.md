@@ -34,8 +34,8 @@ turns the recipe into the final MP4.
 | 1 | Editor core: upload, preview, timeline, trim/split/reorder, undo, MP4 export | ✅ Done |
 | 2 | Text and music: animated text, music with looping and fade, sizes | ✅ Done (basic) |
 | 3 | Template system: 10 templates, gallery, clip effects, overlays, fonts | ✅ Done |
-| 4 | Auto-captions (speech-to-text) with caption styles | Next |
-| 5 | Accounts and saving (Supabase), cloud storage (Cloudflare R2) | |
+| 4 | Auto-captions: free in-browser Whisper, 5 styles, editable list | ✅ Done (needs a real-device check) |
+| 5 | Accounts and saving (Supabase), cloud storage (Cloudflare R2) | Next |
 | 6 | Payments (Stripe), landing page, deploy (Vercel) → **launch V1** | |
 | 7 | AI chat editing (Claude API edits the recipe) | |
 | 8 | Reference-video matching (cut/beat detection + AI vision) | |
@@ -65,7 +65,7 @@ Later (V3): stock music library, brand kit, direct posting to social apps,
 | Templates and animation | Built-in canvas renderer (same code for preview and export) |
 | Server export fallback | FFmpeg / Remotion Lambda |
 | AI | Claude API (Haiku for quick edits, larger models for reference analysis) |
-| Captions | Speech-to-text API |
+| Captions | Whisper running in the browser (Transformers.js), free; a paid API can be a Pro option later |
 | Accounts and database | Supabase |
 | Storage | Cloudflare R2 |
 | Payments | Stripe |
@@ -76,7 +76,7 @@ Later (V3): stock music library, brand kit, direct posting to social apps,
 - Building and testing: about $0–20/month
 - 100 active users: about $50–150/month
 - 1,000 active users: about $300–1,500/month, mostly AI and storage
-- Video processing itself runs in users' browsers and costs nothing
+- Video processing and captions run in users' browsers and cost nothing
 
 ## Pricing (draft, not final)
 
@@ -93,6 +93,15 @@ Vintage Memories, Travel Diary, Quote Slideshow, Classic Meme, Product Spotlight
 Each one is a function in `src/lib/templates.ts` that turns the user's clips
 into a normal, fully editable project.
 
+## Captions (milestone 4)
+
+Whisper (base model) runs in a Web Worker on the user's device via
+Transformers.js. The model (~80 MB) downloads once from Hugging Face and is
+cached; the ONNX runtime files are served from our own site (`public/ort`,
+copied by `scripts/copy-ort.mjs`). Uses WebGPU when available, WebAssembly
+otherwise. Captions are normal text overlays tagged as captions, so they can
+be restyled, edited or removed together.
+
 ## Known limits
 
 - Preview relies on the browser's own video player. Files it can't play (some
@@ -103,3 +112,6 @@ into a normal, fully editable project.
 - Color filters are not supported by Safari's canvas yet, so they are skipped there.
 - Exports with color filters or film grain run at about real-time speed on
   machines without a graphics card.
+- Captions have only been tested with a stand-in for the AI model: the model
+  host is blocked in the development sandbox. Try it on a real device before launch.
+- The first caption run downloads ~80 MB; on old phones transcription is slow.

@@ -34,6 +34,8 @@ preview and the export both draw frames from that recipe with the same renderer
 | Frame renderer (picture fit, text styles, animations) | `src/lib/render.ts` |
 | MP4 export (Mediabunny + WebCodecs, audio mix) | `src/lib/export.ts` |
 | File import (duration, size, thumbnails) | `src/lib/media.ts` |
+| Templates | `src/lib/templates.ts` |
+| Auto-captions (Whisper in a Web Worker) | `src/lib/captions.ts`, `src/lib/captions.worker.ts` |
 | Editor UI | `src/components/editor/` |
 
 ## Keyboard shortcuts

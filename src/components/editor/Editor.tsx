@@ -14,6 +14,7 @@ import MediaPanel from "./MediaPanel";
 import Inspector from "./Inspector";
 import ExportDialog from "./ExportDialog";
 import TemplatesPanel from "./TemplatesPanel";
+import CaptionsPanel from "./CaptionsPanel";
 import Logo from "../Logo";
 import { applyTemplate, getTemplate, type TemplateDef } from "@/lib/templates";
 
@@ -23,7 +24,7 @@ export default function Editor() {
   const [importing, setImporting] = useState(0);
   const [errors, setErrors] = useState<string[]>([]);
   const [exporting, setExporting] = useState(false);
-  const [tab, setTab] = useState<"media" | "templates">("media");
+  const [tab, setTab] = useState<"media" | "templates" | "captions">("media");
   const [pendingTemplate, setPendingTemplate] = useState<TemplateDef | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const playback = useMemo(createPlayback, []);
@@ -238,7 +239,7 @@ export default function Editor() {
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         <aside className="order-2 flex max-h-72 shrink-0 flex-col gap-3 border-white/10 p-3 lg:order-1 lg:max-h-none lg:w-72 lg:border-r">
           <div className="flex rounded-lg bg-white/5 p-0.5 ring-1 ring-white/10" role="tablist">
-            {(["media", "templates"] as const).map((t) => (
+            {(["media", "templates", "captions"] as const).map((t) => (
               <button
                 key={t}
                 type="button"
@@ -249,7 +250,7 @@ export default function Editor() {
                   tab === t ? "bg-violet-600 text-white" : "text-white/60 hover:text-white"
                 }`}
               >
-                {t === "media" ? "📁 Media" : "✨ Templates"}
+                {t === "media" ? "📁 Media" : t === "templates" ? "✨ Templates" : "💬 Captions"}
               </button>
             ))}
           </div>
@@ -264,6 +265,8 @@ export default function Editor() {
                 onRemove={removeMedia}
                 busy={importing > 0}
               />
+            ) : tab === "captions" ? (
+              <CaptionsPanel project={project} media={media} playback={playback} dispatch={dispatch} />
             ) : (
               <TemplatesPanel
                 hasMedia={items.some((i) => i.kind !== "audio")}

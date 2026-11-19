@@ -3,12 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "copy-ort": "node scripts/copy-ort.mjs",
+    "predev": "npm run copy-ort",
+    "prebuild": "npm run copy-ort",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
+    "@huggingface/transformers": "^4.3.2",
     "@mediabunny/aac-encoder": "^1.66.1",
     "mediabunny": "^1.66.1",
     "next": "15.5.29",

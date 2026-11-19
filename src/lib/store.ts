@@ -29,6 +29,8 @@ export type Action =
   | { type: "setFit"; fit: FitMode }
   | { type: "rename"; name: string }
   | { type: "setOverlays"; patch: Partial<Overlays> }
+  | { type: "setCaptions"; captions: TextOverlay[] }
+  | { type: "styleCaptions"; patch: Partial<TextOverlay>; uppercase?: boolean }
   | { type: "replaceProject"; project: Project }
   | { type: "select"; selection: Selection }
   | { type: "deleteSelection" }
@@ -151,6 +153,29 @@ export function reducer(state: EditorState, action: Action): EditorState {
 
     case "setOverlays":
       return commit(state, { ...p, overlays: { ...p.overlays, ...action.patch } });
+
+    case "setCaptions":
+      // Replaces any earlier auto-captions; hand-made text is kept.
+      return commit(
+        state,
+        { ...p, texts: [...p.texts.filter((t) => t.group !== "caption"), ...action.captions] },
+        null,
+      );
+
+    case "styleCaptions": {
+      const texts = p.texts.map((t) => {
+        if (t.group !== "caption") return t;
+        const next = { ...t, ...action.patch };
+        if (action.uppercase === true) next.text = next.text.toUpperCase();
+        else if (action.uppercase === false && t.text === t.text.toUpperCase()) {
+          // Back to sentence case: lower-case everything, capitalise the first letter.
+          const lower = t.text.toLowerCase();
+          next.text = lower.charAt(0).toUpperCase() + lower.slice(1);
+        }
+        return next;
+      });
+      return commit(state, { ...p, texts });
+    }
 
     case "replaceProject":
       // Used by templates: one undo step brings back the previous edit.

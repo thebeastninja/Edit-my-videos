@@ -240,7 +240,7 @@ export async function exportProject(
 type Mediabunny = typeof import("mediabunny");
 
 /** Decodes the [from, to) range of a file's audio into one AudioBuffer. */
-async function decodeAudioRange(
+export async function decodeAudioRange(
   mb: Mediabunny,
   file: File,
   from: number,
