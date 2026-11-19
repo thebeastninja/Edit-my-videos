@@ -4,7 +4,8 @@ import { useEffect, useRef } from "react";
 import type { MediaItem, Project, TextOverlay } from "@/lib/types";
 import { ASPECTS } from "@/lib/types";
 import { clipAt, projectDuration } from "@/lib/timeline";
-import { drawFrame, FONT_STACK, type FrameSource } from "@/lib/render";
+import { drawFrame, measureText, type FrameSource } from "@/lib/render";
+import { ensureFonts } from "@/lib/fonts";
 import type { PlaybackStore } from "@/lib/playback";
 import type { Action, Selection } from "@/lib/store";
 
@@ -80,6 +81,10 @@ export default function Preview({ project, media, playback, selection, dispatch 
     return () => a.pause();
   }, [musicItem]);
 
+  useEffect(() => {
+    ensureFonts();
+  }, []);
+
   // The render loop: sync media elements to the playhead and draw a frame.
   useEffect(() => {
     let raf = 0;
@@ -154,7 +159,20 @@ export default function Preview({ project, media, playback, selection, dispatch 
       const ctx = canvas?.getContext("2d");
       if (canvas && ctx && !(waiting && hasDrawn.current)) {
         hasDrawn.current = true;
-        drawFrame(ctx, canvas.width, canvas.height, source, p.fit, p.texts, time);
+        drawFrame(
+          ctx,
+          canvas.width,
+          canvas.height,
+          {
+            source,
+            clip: hit?.placed.clip ?? null,
+            clipTime: hit ? time - hit.placed.start : 0,
+            clipLength: hit ? hit.placed.end - hit.placed.start : 0,
+          },
+          p,
+          time,
+          duration,
+        );
       }
     };
     raf = requestAnimationFrame(tick);
@@ -175,12 +193,8 @@ export default function Preview({ project, media, playback, selection, dispatch 
     const t = playback.get().time;
     const visible = project.texts.filter((o) => t >= o.start && t < o.end).reverse();
     for (const o of visible) {
-      ctx.font = `800 ${o.size * ch}px ${FONT_STACK}`;
-      const longest = Math.max(...o.text.split("\n").map((l) => ctx.measureText(l).width));
-      const halfW = Math.min(longest, cw * 0.86) / 2 / cw + 0.02;
-      const lines = Math.max(1, Math.ceil(longest / (cw * 0.86))) + o.text.split("\n").length - 1;
-      const halfH = (lines * o.size * 1.18) / 2 + 0.01;
-      if (Math.abs(x - o.x) < halfW && Math.abs(y - o.y) < halfH) return o;
+      const box = measureText(ctx, cw, ch, o);
+      if (Math.abs(x - o.x) < box.width / 2 + 0.02 && Math.abs(y - o.y) < box.height / 2 + 0.015) return o;
     }
     return null;
   };

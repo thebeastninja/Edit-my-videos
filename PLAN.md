@@ -33,8 +33,8 @@ turns the recipe into the final MP4.
 |---|---|---|
 | 1 | Editor core: upload, preview, timeline, trim/split/reorder, undo, MP4 export | ✅ Done |
 | 2 | Text and music: animated text, music with looping and fade, sizes | ✅ Done (basic) |
-| 3 | Template system: first 10 templates and the gallery (Remotion) | Next |
-| 4 | Auto-captions (speech-to-text) with caption styles | |
+| 3 | Template system: 10 templates, gallery, clip effects, overlays, fonts | ✅ Done |
+| 4 | Auto-captions (speech-to-text) with caption styles | Next |
 | 5 | Accounts and saving (Supabase), cloud storage (Cloudflare R2) | |
 | 6 | Payments (Stripe), landing page, deploy (Vercel) → **launch V1** | |
 | 7 | AI chat editing (Claude API edits the recipe) | |
@@ -62,7 +62,7 @@ Later (V3): stock music library, brand kit, direct posting to social apps,
 |---|---|
 | App | Next.js, React, Tailwind |
 | Video decode/encode | Mediabunny + WebCodecs (in the browser, free to run) |
-| Templates and animation | Remotion (free for companies up to 3 people) |
+| Templates and animation | Built-in canvas renderer (same code for preview and export) |
 | Server export fallback | FFmpeg / Remotion Lambda |
 | AI | Claude API (Haiku for quick edits, larger models for reference analysis) |
 | Captions | Speech-to-text API |
@@ -86,6 +86,13 @@ Later (V3): stock music library, brand kit, direct posting to social apps,
 | Creator | $15/mo | 1080p, no watermark, all templates, 120 caption minutes, 50 AI credits |
 | Pro | $35/mo | 4K, brand kit, 500 AI credits, reference matching |
 
+## Templates built (milestone 3)
+
+Fast Montage, Wait For It, Cinematic Story, Day in My Life, Top 5 Countdown,
+Vintage Memories, Travel Diary, Quote Slideshow, Classic Meme, Product Spotlight.
+Each one is a function in `src/lib/templates.ts` that turns the user's clips
+into a normal, fully editable project.
+
 ## Known limits
 
 - Preview relies on the browser's own video player. Files it can't play (some
@@ -93,3 +100,6 @@ Later (V3): stock music library, brand kit, direct posting to social apps,
 - Very long or 4K videos are heavy for phones; server export will be the fallback.
 - Projects are not saved yet (milestone 5); refreshing the page loses work.
 - The editor works on phones but is designed for desktop first.
+- Color filters are not supported by Safari's canvas yet, so they are skipped there.
+- Exports with color filters or film grain run at about real-time speed on
+  machines without a graphics card.

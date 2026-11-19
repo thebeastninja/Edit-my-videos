@@ -1,6 +1,17 @@
 "use client";
 
-import type { AspectRatio, MediaItem, Project, TextAnim, TextStyle } from "@/lib/types";
+import type {
+  AspectRatio,
+  ClipFilter,
+  ClipMotion,
+  ClipTransition,
+  MediaItem,
+  Overlays,
+  Project,
+  TextAnim,
+  TextFont,
+  TextStyle,
+} from "@/lib/types";
 import { ASPECTS } from "@/lib/types";
 import type { Action, Selection } from "@/lib/store";
 import { formatTime } from "@/lib/timeline";
@@ -53,6 +64,27 @@ export default function Inspector({ project, media, selection, dispatch }: Props
               />
             </Field>
           )}
+          <Field label="Filter">
+            <Chips<ClipFilter>
+              value={clip.filter ?? "none"}
+              options={[["none", "None"], ["vivid", "Vivid"], ["warm", "Warm"], ["cool", "Cool"], ["vintage", "Vintage"], ["faded", "Faded"], ["bw", "B&W"]]}
+              onChange={(filter) => dispatch({ type: "updateClip", id: clip.id, patch: { filter } })}
+            />
+          </Field>
+          <Field label="Motion">
+            <Chips<ClipMotion>
+              value={clip.motion ?? "none"}
+              options={[["none", "Still"], ["zoomIn", "Zoom in"], ["zoomOut", "Zoom out"], ["panLeft", "Pan ←"], ["panRight", "Pan →"], ["punch", "Punch"]]}
+              onChange={(motion) => dispatch({ type: "updateClip", id: clip.id, patch: { motion } })}
+            />
+          </Field>
+          <Field label="Entrance">
+            <Segmented<ClipTransition>
+              value={clip.transition ?? "cut"}
+              options={[["cut", "Cut"], ["fade", "Fade in"], ["flash", "Flash"]]}
+              onChange={(transition) => dispatch({ type: "updateClip", id: clip.id, patch: { transition } })}
+            />
+          </Field>
           <div className="flex gap-2">
             <Btn onClick={() => dispatch({ type: "duplicateClip", id: clip.id })}>Duplicate</Btn>
             <Btn danger onClick={() => dispatch({ type: "removeClip", id: clip.id })}>Delete</Btn>
@@ -75,17 +107,37 @@ export default function Inspector({ project, media, selection, dispatch }: Props
             className="w-full resize-none rounded-lg bg-white/5 p-2 text-sm text-white ring-1 ring-white/10 outline-none focus:ring-violet-500"
             placeholder="Type something…"
           />
+          <Field label="Font">
+            <Chips<TextFont>
+              value={t.font ?? "sans"}
+              options={[["sans", "Modern"], ["display", "IMPACT"], ["serif", "Elegant"], ["hand", "Marker"]]}
+              onChange={(font) => up({ font })}
+            />
+          </Field>
           <Field label="Style">
             <Segmented<TextStyle>
               value={t.style}
-              options={[["bold", "Shadow"], ["outline", "Outline"], ["box", "Box"]]}
+              options={[["bold", "Shadow"], ["outline", "Outline"], ["box", "Box"], ["highlight", "Highlight"]]}
               onChange={(style) => up({ style })}
             />
           </Field>
+          {(t.style === "box" || t.style === "highlight") && (
+            <Field label="Background">
+              <div className="flex flex-wrap gap-2">
+                {["#111111", "#ffffff", "#facc15", "#8b5cf6", "#ec4899", "#10b981"].map((c) => (
+                  <button
+                    key={c} type="button" onClick={() => up({ bg: c })} aria-label={`Background ${c}`}
+                    className={`h-7 w-7 rounded-md ring-2 ring-offset-2 ring-offset-neutral-900 ${t.bg === c ? "ring-violet-400" : "ring-transparent"}`}
+                    style={{ background: c }}
+                  />
+                ))}
+              </div>
+            </Field>
+          )}
           <Field label="Animation">
-            <Segmented<TextAnim>
+            <Chips<TextAnim>
               value={t.anim}
-              options={[["none", "None"], ["fade", "Fade"], ["pop", "Pop"], ["slide", "Slide"]]}
+              options={[["none", "None"], ["fade", "Fade"], ["pop", "Pop"], ["slide", "Slide"], ["typewriter", "Typewriter"]]}
               onChange={(anim) => up({ anim })}
             />
           </Field>
@@ -172,6 +224,30 @@ export default function Inspector({ project, media, selection, dispatch }: Props
           onChange={(fit) => dispatch({ type: "setFit", fit })}
         />
       </Field>
+      <Field label="Effects on the whole video">
+        <div className="space-y-1.5">
+          {(
+            [
+              ["letterbox", "🎬 Movie bars"],
+              ["vignette", "🌑 Vignette"],
+              ["grain", "📽️ Film grain"],
+              ["fadeOut", "⬛ Fade out at the end"],
+            ] as [keyof Overlays, string][]
+          ).map(([key, label]) => (
+            <Toggle
+              key={key}
+              label={label}
+              checked={Boolean(project.overlays?.[key])}
+              onChange={(on) => dispatch({ type: "setOverlays", patch: { [key]: on } })}
+            />
+          ))}
+          <Toggle
+            label="▬ Progress bar"
+            checked={Boolean(project.overlays?.progressBar)}
+            onChange={(on) => dispatch({ type: "setOverlays", patch: { progressBar: on ? "#ffffff" : null } })}
+          />
+        </div>
+      </Field>
       <div className="rounded-xl bg-white/5 p-3 text-xs leading-relaxed text-white/60">
         <p className="mb-1 font-semibold text-white/80">Shortcuts</p>
         <p>Space play/pause · S split · Delete remove</p>
@@ -195,10 +271,11 @@ function Panel({ title, subtitle, children }: { title: string; subtitle?: string
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="block space-y-1.5">
+    // A div, not a <label>: a label would forward stray clicks to its first button.
+    <div className="block space-y-1.5" role="group" aria-label={label}>
       <span className="text-[11px] font-medium tracking-wide text-white/50 uppercase">{label}</span>
       {children}
-    </label>
+    </div>
   );
 }
 
@@ -227,6 +304,37 @@ function Segmented<T extends string>({ value, options, onChange }: { value: T; o
         </button>
       ))}
     </div>
+  );
+}
+
+function Chips<T extends string>({ value, options, onChange }: { value: T; options: [T, string][]; onChange: (v: T) => void }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map(([v, label]) => (
+        <button
+          key={v} type="button" onClick={() => onChange(v)}
+          className={`rounded-full px-2.5 py-1 text-xs font-medium ring-1 transition ${
+            value === v ? "bg-violet-600 text-white ring-violet-400" : "bg-white/5 text-white/70 ring-white/10 hover:bg-white/10"
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      type="button" role="switch" aria-checked={checked} onClick={() => onChange(!checked)}
+      className="flex w-full items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-xs text-white/80 ring-1 ring-white/10 hover:bg-white/10"
+    >
+      {label}
+      <span className={`relative h-4 w-7 rounded-full transition ${checked ? "bg-violet-500" : "bg-white/20"}`}>
+        <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-all ${checked ? "left-3.5" : "left-0.5"}`} />
+      </span>
+    </button>
   );
 }
 

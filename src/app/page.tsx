@@ -7,7 +7,7 @@ const features = [
   { icon: "🎵", title: "Music in one click", body: "Drop in a song. It loops, mixes with your clips and fades out for you." },
   { icon: "📱", title: "Every size", body: "TikTok, Reels, Shorts, YouTube or square. Switch any time, nothing breaks." },
   { icon: "⚡", title: "Private & fast", body: "Your videos never leave your device. Export renders right in your browser." },
-  { icon: "✨", title: "AI & templates", body: "Coming soon: templates, auto-captions and edit-by-chat. Just say the vibe." },
+  { icon: "✨", title: "One-click templates", body: "Fast montages, cinematic stories, countdowns and more. Drop in your clips and it's edited." },
 ];
 
 export default function Home() {
@@ -39,6 +39,12 @@ export default function Home() {
               className="rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-7 py-3.5 text-base font-semibold shadow-xl shadow-violet-600/30 hover:brightness-110"
             >
               Start editing, it&apos;s free
+            </Link>
+            <Link
+              href="/templates"
+              className="rounded-2xl bg-white/10 px-7 py-3.5 text-base font-semibold ring-1 ring-white/15 hover:bg-white/15"
+            >
+              ✨ Browse templates
             </Link>
           </div>
           <p className="mt-4 text-xs text-white/40">No sign-up. Works with MP4, MOV, WebM and more.</p>

@@ -13,7 +13,9 @@ import Timeline from "./Timeline";
 import MediaPanel from "./MediaPanel";
 import Inspector from "./Inspector";
 import ExportDialog from "./ExportDialog";
+import TemplatesPanel from "./TemplatesPanel";
 import Logo from "../Logo";
+import { applyTemplate, getTemplate, type TemplateDef } from "@/lib/templates";
 
 export default function Editor() {
   const [state, dispatch] = useReducer(reducer, undefined, initialState);
@@ -21,6 +23,9 @@ export default function Editor() {
   const [importing, setImporting] = useState(0);
   const [errors, setErrors] = useState<string[]>([]);
   const [exporting, setExporting] = useState(false);
+  const [tab, setTab] = useState<"media" | "templates">("media");
+  const [pendingTemplate, setPendingTemplate] = useState<TemplateDef | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
   const playback = useMemo(createPlayback, []);
   const { time, playing } = usePlayback(playback);
   const { project, selection } = state;
@@ -57,16 +62,56 @@ export default function Editor() {
         for (const item of added) next.set(item.id, item);
         return next;
       });
-      // First upload goes straight onto the timeline, so new users see something happen.
-      const visual = added.filter((i) => i.kind !== "audio");
-      if (project.clips.length === 0) visual.forEach(addToTimeline);
+      let base = project;
       if (!project.music) {
         const song = added.find((i) => i.kind === "audio");
-        if (song) dispatch({ type: "setMusic", music: { mediaId: song.id, volume: 0.6 } });
+        if (song) {
+          base = { ...base, music: { mediaId: song.id, volume: 0.6 } };
+          dispatch({ type: "setMusic", music: base.music });
+        }
+      }
+      const visual = added.filter((i) => i.kind !== "audio");
+      if (pendingTemplate && visual.length) {
+        // The user picked a template first: build it from everything uploaded so far.
+        const all = [...Array.from(media.values()), ...added];
+        dispatch({ type: "replaceProject", project: applyTemplate(pendingTemplate, all, base) });
+        playback.set({ time: 0 });
+        setToast(`${pendingTemplate.emoji} ${pendingTemplate.name} applied. Press play!`);
+        setPendingTemplate(null);
+      } else if (project.clips.length === 0) {
+        // First upload goes straight onto the timeline, so new users see something happen.
+        visual.forEach(addToTimeline);
       }
     },
-    [project.clips.length, project.music, addToTimeline],
+    [project, media, pendingTemplate, playback, addToTimeline],
   );
+
+  const pickTemplate = (def: TemplateDef) => {
+    const items = Array.from(media.values());
+    if (!items.some((i) => i.kind !== "audio")) {
+      setPendingTemplate(def);
+      setTab("templates");
+      return;
+    }
+    dispatch({ type: "replaceProject", project: applyTemplate(def, items, project) });
+    playback.set({ time: 0, playing: false });
+    setToast(`${def.emoji} ${def.name} applied. Undo with Ctrl/⌘+Z.`);
+  };
+
+  // Opening /editor?template=… starts with that template picked.
+  useEffect(() => {
+    const def = getTemplate(new URLSearchParams(window.location.search).get("template"));
+    if (def) {
+      setPendingTemplate(def);
+      setTab("templates");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!toast) return;
+    const id = setTimeout(() => setToast(null), 3500);
+    return () => clearTimeout(id);
+  }, [toast]);
 
   const removeMedia = (item: MediaItem) => {
     project.clips.filter((c) => c.mediaId === item.id).forEach((c) => dispatch({ type: "removeClip", id: c.id }));
@@ -191,16 +236,45 @@ export default function Editor() {
 
       {/* Main area */}
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        <aside className="order-2 max-h-64 shrink-0 border-white/10 p-3 lg:order-1 lg:max-h-none lg:w-72 lg:border-r">
-          <MediaPanel
-            items={items}
-            musicId={project.music?.mediaId ?? null}
-            onFiles={onFiles}
-            onAdd={addToTimeline}
-            onSetMusic={(item) => dispatch({ type: "setMusic", music: { mediaId: item.id, volume: 0.6 } })}
-            onRemove={removeMedia}
-            busy={importing > 0}
-          />
+        <aside className="order-2 flex max-h-72 shrink-0 flex-col gap-3 border-white/10 p-3 lg:order-1 lg:max-h-none lg:w-72 lg:border-r">
+          <div className="flex rounded-lg bg-white/5 p-0.5 ring-1 ring-white/10" role="tablist">
+            {(["media", "templates"] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                role="tab"
+                aria-selected={tab === t}
+                onClick={() => setTab(t)}
+                className={`flex-1 rounded-md py-1.5 text-xs font-semibold capitalize transition ${
+                  tab === t ? "bg-violet-600 text-white" : "text-white/60 hover:text-white"
+                }`}
+              >
+                {t === "media" ? "📁 Media" : "✨ Templates"}
+              </button>
+            ))}
+          </div>
+          <div className="min-h-0 flex-1">
+            {tab === "media" ? (
+              <MediaPanel
+                items={items}
+                musicId={project.music?.mediaId ?? null}
+                onFiles={onFiles}
+                onAdd={addToTimeline}
+                onSetMusic={(item) => dispatch({ type: "setMusic", music: { mediaId: item.id, volume: 0.6 } })}
+                onRemove={removeMedia}
+                busy={importing > 0}
+              />
+            ) : (
+              <TemplatesPanel
+                hasMedia={items.some((i) => i.kind !== "audio")}
+                pending={pendingTemplate}
+                activeId={project.templateId}
+                onUse={pickTemplate}
+                onFiles={onFiles}
+                onCancelPending={() => setPendingTemplate(null)}
+              />
+            )}
+          </div>
         </aside>
 
         <main className="order-1 flex min-h-[280px] min-w-0 flex-1 flex-col lg:order-2">
@@ -238,6 +312,12 @@ export default function Editor() {
       </section>
 
       {exporting && <ExportDialog project={project} media={media} onClose={() => setExporting(false)} />}
+
+      {toast && (
+        <div role="status" className="fixed bottom-56 left-1/2 z-40 -translate-x-1/2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black shadow-2xl">
+          {toast}
+        </div>
+      )}
     </div>
   );
 }

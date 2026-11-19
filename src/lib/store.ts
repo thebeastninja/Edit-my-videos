@@ -1,4 +1,4 @@
-import type { AspectRatio, Clip, FitMode, MusicTrack, Project, TextOverlay } from "./types";
+import type { AspectRatio, Clip, FitMode, MusicTrack, Overlays, Project, TextOverlay } from "./types";
 import { clipAt, clipLength, layoutClips, uid } from "./timeline";
 
 export type Selection =
@@ -28,6 +28,8 @@ export type Action =
   | { type: "setAspect"; aspect: AspectRatio }
   | { type: "setFit"; fit: FitMode }
   | { type: "rename"; name: string }
+  | { type: "setOverlays"; patch: Partial<Overlays> }
+  | { type: "replaceProject"; project: Project }
   | { type: "select"; selection: Selection }
   | { type: "deleteSelection" }
   | { type: "checkpoint" }
@@ -146,6 +148,13 @@ export function reducer(state: EditorState, action: Action): EditorState {
 
     case "rename":
       return commit(state, { ...p, name: action.name });
+
+    case "setOverlays":
+      return commit(state, { ...p, overlays: { ...p.overlays, ...action.patch } });
+
+    case "replaceProject":
+      // Used by templates: one undo step brings back the previous edit.
+      return commit(state, action.project, null);
 
     case "select":
       return { ...state, selection: action.selection };

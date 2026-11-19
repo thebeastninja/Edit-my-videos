@@ -4,6 +4,8 @@ import type { MediaItem, Project } from "./types";
 import { ASPECTS } from "./types";
 import { layoutClips, projectDuration } from "./timeline";
 import { drawFrame, type FrameSource } from "./render";
+import { ensureFonts } from "./fonts";
+import type { PlacedClip } from "./timeline";
 
 export type ExportQuality = "720p" | "1080p";
 
@@ -141,10 +143,25 @@ export async function exportProject(
     audioSentUntil = until;
   };
 
+  await ensureFonts();
   let frame = 0;
+  let current: PlacedClip | null = null;
   const emit = async (source: FrameSource | null) => {
     const t = frame / fps;
-    drawFrame(ctx, width, height, source, project.fit, project.texts, t);
+    drawFrame(
+      ctx,
+      width,
+      height,
+      {
+        source,
+        clip: current?.clip ?? null,
+        clipTime: current ? t - current.start : 0,
+        clipLength: current ? current.end - current.start : 0,
+      },
+      project,
+      t,
+      duration,
+    );
     await videoSource.add(t, 1 / fps);
     frame++;
     if (frame % fps === 0) await feedAudio(frame / fps + 1);
@@ -157,6 +174,7 @@ export async function exportProject(
   try {
     // 3. Render every frame, clip by clip.
     for (const placed of layoutClips(project.clips)) {
+      current = placed;
       const item = media.get(placed.clip.mediaId);
       const endFrame = Math.round(placed.end * fps);
       const count = endFrame - frame;
@@ -198,6 +216,7 @@ export async function exportProject(
     }
 
     // Text that runs past the last clip is drawn over black.
+    current = null;
     while (frame < totalFrames) await emit(null);
 
     await feedAudio(duration + 1);

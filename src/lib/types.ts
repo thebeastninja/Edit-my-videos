@@ -16,6 +16,10 @@ export interface MediaItem {
   hasAudio: boolean;
 }
 
+export type ClipFilter = "none" | "bw" | "warm" | "cool" | "vintage" | "vivid" | "faded";
+export type ClipMotion = "none" | "zoomIn" | "zoomOut" | "panLeft" | "panRight" | "punch";
+export type ClipTransition = "cut" | "fade" | "flash";
+
 export interface Clip {
   id: string;
   mediaId: string;
@@ -24,10 +28,15 @@ export interface Clip {
   /** End point inside the source media, in seconds. */
   out: number;
   volume: number; // 0..1
+  filter?: ClipFilter;
+  motion?: ClipMotion;
+  /** How this clip enters: a hard cut, a fade from black or a white flash. */
+  transition?: ClipTransition;
 }
 
-export type TextStyle = "bold" | "outline" | "box";
-export type TextAnim = "none" | "fade" | "pop" | "slide";
+export type TextStyle = "bold" | "outline" | "box" | "highlight";
+export type TextAnim = "none" | "fade" | "pop" | "slide" | "typewriter";
+export type TextFont = "sans" | "display" | "serif" | "hand";
 
 export interface TextOverlay {
   id: string;
@@ -43,6 +52,9 @@ export interface TextOverlay {
   color: string;
   style: TextStyle;
   anim: TextAnim;
+  font?: TextFont;
+  /** Background color for the box and highlight styles. */
+  bg?: string;
 }
 
 export interface MusicTrack {
@@ -53,6 +65,17 @@ export interface MusicTrack {
 export type AspectRatio = "9:16" | "16:9" | "1:1" | "4:5";
 export type FitMode = "fill" | "fit";
 
+/** Effects drawn over the whole video. */
+export interface Overlays {
+  letterbox?: boolean;
+  vignette?: boolean;
+  grain?: boolean;
+  /** Color of a thin progress bar along the top, or null for none. */
+  progressBar?: string | null;
+  /** Fade to black at the very end. */
+  fadeOut?: boolean;
+}
+
 export interface Project {
   name: string;
   aspect: AspectRatio;
@@ -60,6 +83,9 @@ export interface Project {
   clips: Clip[];
   texts: TextOverlay[];
   music: MusicTrack | null;
+  overlays?: Overlays;
+  /** The template this project was started from, if any. */
+  templateId?: string;
 }
 
 export const ASPECTS: Record<AspectRatio, { w: number; h: number; label: string }> = {
